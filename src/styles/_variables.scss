@@ -1,0 +1,25 @@
+$phi: 1.6180339887;
+$base-size: 1rem;
+
+$spacing--xxxl: $base-size * pow($phi, 4); // 6.854
+$spacing--xxl: $base-size * pow($phi, 3); // 4.326
+$spacing--xl: $base-size * pow($phi, 2); // 2.618
+$spacing--lg: $base-size * $phi; // 1.618
+$spacing--md: (($base-size * $phi) + $base-size) / 2; // 1.309
+$spacing--sm: $base-size; // 1
+$spacing--xs: $base-size / sqrt($phi); // 0.786
+$spacing--xxs: $base-size / $phi; // 0.618
+$spacing--xxxs: $base-size / pow($phi, 2); // 0.382
+
+/* Breakpoint variables */
+$breakpoint--xs: 400px;
+$breakpoint--sm: 700px;
+$breakpoint--md: 1100px;
+$breakpoint--lg: 1350px;
+$breakpoint--xl: 1500px;
+
+$color--dark: #131314;
+$color--dark-overlay: #{$color--dark}bb;
+$color--light: #ffffff;
+
+$shadow--default: 0 $spacing--xxxs $spacing--xxxs #{$color--dark}40;

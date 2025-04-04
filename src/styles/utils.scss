@@ -1,0 +1,183 @@
+@import "./variables";
+
+/* Mixin for flexible media queries */
+@mixin media($min: null, $max: null) {
+	$min-width: null;
+	$max-width: null;
+
+	// Determine min-width value
+	@if $min == "xs" {
+		$min-width: $breakpoint--xs;
+	} @else if $min == "sm" {
+		$min-width: $breakpoint--sm;
+	} @else if $min == "md" {
+		$min-width: $breakpoint--md;
+	} @else if $min == "lg" {
+		$min-width: $breakpoint--lg;
+	} @else if $min == "xl" {
+		$min-width: $breakpoint--xl;
+	} @else {
+		$min-width: $min;
+	}
+
+	// Determine max-width value
+	@if $max == "xs" {
+		$max-width: $breakpoint--xs;
+	} @else if $max == "sm" {
+		$max-width: $breakpoint--sm;
+	} @else if $max == "md" {
+		$max-width: $breakpoint--md;
+	} @else if $max == "lg" {
+		$max-width: $breakpoint--lg;
+	} @else if $max == "xl" {
+		$max-width: $breakpoint--xl;
+	} @else {
+		$max-width: $max;
+	}
+
+	// Build the media query
+	@if $min and $max {
+		@media (min-width: $min-width) and (max-width: $max-width) {
+			@content;
+		}
+	} @else if $min {
+		@media (min-width: $min-width) {
+			@content;
+		}
+	} @else if $max {
+		@media (max-width: $max-width) {
+			@content;
+		}
+	} @else {
+		@content;
+	}
+}
+
+@mixin hide-up($breakpoint) {
+	@if $breakpoint == "xs" {
+		@media (min-width: $breakpoint--xs) {
+			display: none !important;
+		}
+	} @else if $breakpoint == "sm" {
+		@media (min-width: $breakpoint--sm) {
+			display: none !important;
+		}
+	} @else if $breakpoint == "md" {
+		@media (min-width: $breakpoint--md) {
+			display: none !important;
+		}
+	} @else if $breakpoint == "lg" {
+		@media (min-width: $breakpoint--lg) {
+			display: none !important;
+		}
+	} @else if $breakpoint == "xl" {
+		@media (min-width: $breakpoint--xl) {
+			display: none !important;
+		}
+	}
+}
+
+@mixin hide-down($breakpoint) {
+	@if $breakpoint == "xs" {
+		@media (max-width: $breakpoint--xs) {
+			display: none !important;
+		}
+	} @else if $breakpoint == "sm" {
+		@media (max-width: $breakpoint--sm) {
+			display: none !important;
+		}
+	} @else if $breakpoint == "md" {
+		@media (max-width: $breakpoint--md) {
+			display: none !important;
+		}
+	} @else if $breakpoint == "lg" {
+		@media (max-width: $breakpoint--lg) {
+			display: none !important;
+		}
+	} @else if $breakpoint == "xl" {
+		@media (max-width: $breakpoint--xl) {
+			display: none !important;
+		}
+	}
+}
+
+.hide--xs-up {
+	@include hide-up(xs);
+}
+
+.hide--sm-up {
+	@include hide-up(sm);
+}
+
+.hide--md-up {
+	@include hide-up(md);
+}
+
+.hide--lg-up {
+	@include hide-up(lg);
+}
+
+.hide--xl-up {
+	@include hide-up(xl);
+}
+
+.hide--xs-down {
+	@include hide-down(xs);
+}
+
+.hide--sm-down {
+	@include hide-down(sm);
+}
+
+.hide--md-down {
+	@include hide-down(md);
+}
+
+.hide--lg-down {
+	@include hide-down(lg);
+}
+
+.hide--xl-down {
+	@include hide-down(xl);
+}
+
+.gap {
+	display: flex;
+	flex-direction: column;
+
+	&--xxxl {
+		gap: $spacing--xxxl;
+	}
+
+	&--xxl {
+		gap: $spacing--xxl;
+	}
+
+	&--xl {
+		gap: $spacing--xl;
+	}
+
+	&--lg {
+		gap: $spacing--lg;
+	}
+
+	&--md {
+		gap: $spacing--md;
+	}
+
+	&--sm {
+		gap: $spacing--sm;
+	}
+
+	&--xs {
+		gap: $spacing--xs;
+	}
+
+	&--xxs {
+		gap: $spacing--xxs;
+	}
+
+	&--xxxs {
+		gap: $spacing--xxxs;
+	}
+}

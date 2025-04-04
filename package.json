@@ -1,0 +1,42 @@
+{
+	"name": "theo-virgo-videography",
+	"version": "0.1.0",
+	"private": true,
+	"dependencies": {
+		"@prismicio/client": "^7.15.1",
+		"@prismicio/react": "^2.9.1",
+		"lodash.clamp": "^4.0.3",
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0",
+		"react-lines-ellipsis": "^0.15.4",
+		"react-router-dom": "^5.3.4",
+		"react-scripts": "5.0.1",
+		"react-type-animation": "^3.2.0",
+		"sass": "^1.86.3",
+		"web-vitals": "^2.1.0"
+	},
+	"scripts": {
+		"start": "react-scripts start",
+		"build": "react-scripts build",
+		"test": "react-scripts test",
+		"eject": "react-scripts eject"
+	},
+	"eslintConfig": {
+		"extends": [
+			"react-app",
+			"react-app/jest"
+		]
+	},
+	"browserslist": {
+		"production": [
+			">0.2%",
+			"not dead",
+			"not op_mini all"
+		],
+		"development": [
+			"last 1 chrome version",
+			"last 1 firefox version",
+			"last 1 safari version"
+		]
+	}
+}

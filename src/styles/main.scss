@@ -1,0 +1,293 @@
+@import "./variables";
+@import "./utils";
+
+* {
+	font-style: unset;
+	line-height: unset;
+	font-size: unset;
+	font-family: "area-inktrap", sans-serif;
+	appearance: none;
+	background-color: unset;
+	color: $color--light;
+	border: none;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	text-decoration: none;
+	list-style-type: none;
+	flex-direction: column;
+
+	@include media(null, sm) {
+		font-size: 16px;
+	}
+
+	@include media(sm) {
+		font-size: 17.3px;
+	}
+}
+
+#root {
+	display: flex;
+	min-height: 100svh;
+	background-color: $color--dark;
+	overflow: hidden;
+	transition: ease-in-out 1000ms margin-top;
+
+	@include media(sm) {
+		align-items: center;
+	}
+}
+
+h1 {
+	font-size: $spacing--xxl;
+	line-height: 110%;
+
+	@include media(null, sm) {
+		font-size: $spacing--xl;
+	}
+}
+
+h2 {
+	font-size: $spacing--xl;
+	line-height: 120%;
+}
+
+p {
+	font-size: $spacing--sm;
+	line-height: 145%;
+}
+
+.button {
+	display: flex;
+	padding: $spacing--xs;
+	align-items: flex-start;
+	font-size: $spacing--sm;
+	border-radius: $spacing--xs;
+	background-color: $color--light;
+	box-shadow: $shadow--default;
+	font-weight: bold;
+}
+
+.button--small {
+	padding: $spacing--xxs;
+	font-size: $spacing--xs;
+	border-radius: $spacing--xxs;
+}
+
+.grid--12 {
+	display: grid;
+	align-items: center;
+	grid-template-columns: repeat(12, 1fr);
+	@include media(null, sm) {
+		column-gap: 0;
+	}
+
+	@include media(sm) {
+		row-gap: $spacing--md;
+		column-gap: $spacing--sm;
+	}
+}
+
+.section {
+	max-width: $breakpoint--xl;
+}
+
+.section--intro {
+	@extend .grid--12;
+
+	width: 100%;
+	max-width: $breakpoint--xl;
+	height: calc(100svh - $spacing--xxxl);
+
+	.intro__copy {
+		height: min-content;
+		row-gap: $spacing--md;
+
+		@include media(null, sm) {
+			display: flex;
+			grid-column: 3 / -3;
+
+			h1,
+			p {
+				text-align: center;
+			}
+		}
+
+		@include media(sm) {
+			grid-column: 5 / -2;
+			display: grid;
+			grid-template-columns: subgrid;
+
+			h1 {
+				grid-column: 1 / -1;
+			}
+			p {
+				grid-column: span 4;
+			}
+		}
+	}
+}
+
+.section--portfolio {
+	position: relative;
+	transition: ease-in-out 1s min-height;
+
+	@include media(sm) {
+		display: flex;
+		justify-content: center;
+	}
+
+	.navigation__wrapper {
+		position: absolute;
+		width: calc((100% / 12) - ($spacing--sm / 12));
+		height: 100%;
+		top: 0;
+		z-index: 10;
+		display: flex;
+		gap: $spacing--xs;
+		justify-content: center;
+		align-items: center;
+
+		@include media(null, sm) {
+			position: absolute;
+			right: $spacing--sm;
+			height: 100%;
+			right: 0;
+		}
+
+		@include media(sm) {
+			left: calc((100% / 12) + ($spacing--sm / 12));
+			grid-column: 2 / 3;
+		}
+
+		.navigation__dot {
+			width: $spacing--xs;
+			height: $spacing--xs;
+			border-radius: 50%;
+			border: 1px solid white;
+
+			transition: ease-in-out 230ms background-color;
+
+			&.active {
+				background-color: white;
+			}
+		}
+	}
+
+	.portfolio-item__wrapper {
+		@extend .grid--12;
+
+		z-index: 5;
+		align-items: center;
+		will-change: transform;
+		transition: ease-in-out 230ms transform;
+
+		@include media(null, sm) {
+			grid-template-rows: 1fr auto;
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+		}
+
+		// @include media(sm) {
+		&:not(.selected) {
+			display: none;
+		}
+		// }
+
+		.viewer__wrapper {
+			position: relative;
+			background-color: grey;
+			overflow: hidden;
+
+			video {
+				object-fit: cover;
+				object-position: center;
+				width: 100%;
+				height: 100%;
+			}
+
+			@include media(null, sm) {
+				height: 100svh;
+				grid-row: 1 / -1;
+				grid-column: 1 / -1;
+			}
+
+			@include media(sm) {
+				grid-column: 3 / 6;
+				aspect-ratio: 9 / 16;
+			}
+		}
+
+		.overlay {
+			@include media(null, sm) {
+				position: relative;
+				z-index: 5;
+				grid-row: 1;
+				width: 100%;
+				height: 100%;
+				grid-column: 1 / -1;
+				background: linear-gradient(
+					to bottom,
+					#{$color--dark}00 0%,
+					#{$color--dark}00 80%,
+					$color--dark-overlay 100%
+				);
+			}
+
+			@include media(sm) {
+				display: none;
+			}
+		}
+
+		.copy__wrapper {
+			position: relative;
+			z-index: 10;
+			height: min-content;
+			row-gap: $spacing--md;
+			display: grid;
+			grid-template-columns: subgrid;
+
+			@include media(null, sm) {
+				grid-row: 2;
+				grid-column: 1 / -1;
+				row-gap: $spacing--xxxs;
+				align-self: flex-end;
+				padding: $spacing--lg 0;
+				background-color: $color--dark-overlay;
+
+				h2,
+				p {
+					grid-column: 2 / -2;
+				}
+
+				h2 {
+					font-size: 1rem;
+				}
+
+				p.minimised {
+					overflow: hidden;
+					text-overflow: ellipsis;
+					display: -webkit-box;
+					-webkit-line-clamp: 2;
+					-webkit-box-orient: vertical;
+				}
+			}
+
+			@include media(sm) {
+				grid-column: 7 / -1;
+
+				h2 {
+					grid-column: span 5;
+				}
+				p {
+					grid-column: span 4;
+				}
+			}
+		}
+	}
+}
