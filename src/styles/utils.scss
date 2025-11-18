@@ -141,43 +141,23 @@
 	@include hide-down(xl);
 }
 
-.gap {
-	display: flex;
-	flex-direction: column;
+// Generate gap utility classes
+$gap-sizes: (
+	"xxxl": $spacing--xxxl,
+	"xxl": $spacing--xxl,
+	"xl": $spacing--xl,
+	"lg": $spacing--lg,
+	"md": $spacing--md,
+	"sm": $spacing--sm,
+	"xs": $spacing--xs,
+	"xxs": $spacing--xxs,
+	"xxxs": $spacing--xxxs,
+);
 
-	&--xxxl {
-		gap: $spacing--xxxl;
-	}
-
-	&--xxl {
-		gap: $spacing--xxl;
-	}
-
-	&--xl {
-		gap: $spacing--xl;
-	}
-
-	&--lg {
-		gap: $spacing--lg;
-	}
-
-	&--md {
-		gap: $spacing--md;
-	}
-
-	&--sm {
-		gap: $spacing--sm;
-	}
-
-	&--xs {
-		gap: $spacing--xs;
-	}
-
-	&--xxs {
-		gap: $spacing--xxs;
-	}
-
-	&--xxxs {
-		gap: $spacing--xxxs;
+@each $name, $size in $gap-sizes {
+	.gap--#{$name} {
+		display: flex;
+		flex-direction: column;
+		gap: $size;
 	}
 }
