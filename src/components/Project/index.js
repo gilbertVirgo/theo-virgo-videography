@@ -2,7 +2,7 @@ import React from "react";
 
 export default ({ title, description, video_file, video_orientation }) => {
 	let [showFullText, setShowFullText] = React.useState(false);
-	let [isPaused, setIsPaused] = React.useState(false); // Video starts with autoPlay
+	let [isPaused, setIsPaused] = React.useState(false);
 	let [isMuted, setIsMuted] = React.useState(true);
 	let [actionIndicator, setActionIndicator] = React.useState(null); // 'pause', 'rewind', or null
 
@@ -70,12 +70,10 @@ export default ({ title, description, video_file, video_orientation }) => {
 			// Video is paused - play it and hide full text
 			video.play();
 			setShowFullText(false);
-			setIsPaused(false);
 		} else {
 			// Video is playing - pause it and show full text
 			video.pause();
 			setShowFullText(true);
-			setIsPaused(true);
 			showActionIndicator("pause");
 		}
 	};
@@ -105,9 +103,12 @@ export default ({ title, description, video_file, video_orientation }) => {
 		mainVideo.addEventListener("volumechange", handleVolumeChange);
 		mainVideo.addEventListener("loadeddata", handleLoaded);
 
-		// Set initial muted state and start playing
-		mainVideo.muted = isMuted;
-		mainVideo.play().catch(() => {});
+		// Ensure the video element starts with the same muted state as React.
+		try {
+			mainVideo.muted = !!isMuted;
+		} catch (e) {
+			// ignore (defensive)
+		}
 
 		// Set up intersection observer to pause video when scrolling away
 		// Find the nearest scrollable ancestor (so intersections are calculated
@@ -129,7 +130,7 @@ export default ({ title, description, video_file, video_orientation }) => {
 			return null;
 		};
 
-		const scrollRoot = findScrollParent(mainVideo) || null;
+		const scrollRoot = document.querySelector("main");
 		// Use a high threshold so the section is considered 'in-view' when it's mostly filling the
 		// scroll container (good for snap-to behavior).
 		const observer = new IntersectionObserver(
@@ -138,29 +139,118 @@ export default ({ title, description, video_file, video_orientation }) => {
 				if (!entry) return;
 				// Toggle in-view class on the observed project element
 				if (entry.target) {
-					if (entry.isIntersecting)
+					if (entry.isIntersecting) {
+						console.log("IN VIEW:", entry.target);
 						entry.target.classList.add("in-view");
-					else entry.target.classList.remove("in-view");
+						// Use React state to mark this project as active
+						try {
+							setIsPaused(false);
+						} catch (e) {}
+
+						// Debug: log playing and muted status of every video inside `.project`
+						// immediately after this project is assigned `.in-view`.
+
+						const projectVideos = Array.from(
+							document.querySelectorAll(".project video")
+						);
+						const statuses = projectVideos.map((v, i) => ({
+							src: v.currentSrc || v.src || `project-video#${i}`,
+							playing: !!(
+								!v.paused &&
+								!v.ended &&
+								v.readyState > 2
+							),
+							muted: !!v.muted,
+							paused: !!v.paused,
+							readyState: v.readyState,
+							currentTime: Number.isFinite(v.currentTime)
+								? v.currentTime
+								: null,
+						}));
+						console.log(
+							"[project] .in-view assigned -> video statuses:",
+							{
+								project: entry.target,
+								videoStatuses: statuses,
+							}
+						);
+					} else {
+						// Deactivate this project and mark it paused
+						entry.target.classList.remove("in-view");
+						try {
+							setIsPaused(true);
+						} catch (e) {}
+					}
+					// After toggling classes, mute all videos that are not in the active project
+
+					const vids = Array.from(
+						document.querySelectorAll(
+							".project:not(.in-view) video"
+						)
+					);
+					vids.forEach((v) => {
+						try {
+							v.pause();
+							v.currentTime = 0;
+						} catch (e) {
+							// ignore errors (e.g., removed element)
+						}
+					});
 				}
 
-				// Instead of pausing videos when out-of-view, mute them so autoplay
-				// can continue and audio doesn't overlap.
+				// When out-of-view, hide full text. Do not auto-mute videos here.
 				if (!entry.isIntersecting) {
 					try {
-						mainVideo.muted = true;
-						setIsMuted(true);
 						setShowFullText(false);
 					} catch (e) {}
 				} else {
 					// When in-view, leave playback running (autoPlay handles it).
-					// Do not auto-unmute; keep the mute state controlled by user.
 				}
+				// Debug: log playing and muted status of every video when a new
+				// project is assigned `.in-view` so we can trace playback state.
+
+				const allVideos = Array.from(
+					document.querySelectorAll("video")
+				);
+				const statuses = allVideos.map((v, i) => ({
+					src: v.currentSrc || v.src || `video#${i}`,
+					playing: !!(!v.paused && !v.ended && v.readyState > 2),
+					muted: !!v.muted,
+					currentTime: Number.isFinite(v.currentTime)
+						? v.currentTime
+						: null,
+				}));
+				console.log("[project] Assigned .in-view to:", entry.target, {
+					videoStatuses: statuses,
+				});
 			},
 			{ root: scrollRoot, threshold: 0.75, rootMargin: "0px" }
 		);
 
 		const projectSection = mainVideo.closest(".project");
 		if (projectSection) observer.observe(projectSection);
+
+		// Simple hack: when the window scrolls, mute all video elements to avoid
+		// accidental audio during scroll. Kept minimal and defensive.
+		const handleWindowScroll = () => {
+			try {
+				const vids = Array.from(document.querySelectorAll("video"));
+				vids.forEach((v) => {
+					try {
+						v.muted = true;
+					} catch (e) {
+						// ignore
+					}
+				});
+				try {
+					setIsMuted(true);
+				} catch (e) {}
+			} catch (e) {}
+		};
+
+		window.addEventListener("scroll", handleWindowScroll, {
+			passive: true,
+		});
 
 		// ResizeObserver to keep canvas matched to video displayed size
 		let resizeObserver = null;
@@ -214,11 +304,7 @@ export default ({ title, description, video_file, video_orientation }) => {
 	}, []);
 
 	return (
-		<section
-			className={`section project project--${video_orientation} ${
-				isPaused ? "isPaused" : ""
-			}`}
-		>
+		<section className={`section project project--${video_orientation}`}>
 			<div className="video__wrapper">
 				<div className="action-indicator">
 					{actionIndicator === "pause" && (
@@ -250,17 +336,14 @@ export default ({ title, description, video_file, video_orientation }) => {
 						setIsMuted(video.muted);
 
 						// If unmuting, restart video from beginning
-						if (!video.muted) {
+						if (video.paused) {
 							video.currentTime = 0;
 							showActionIndicator("rewind");
 						}
-
 						// Force play to activate audio context (browser autoplay policy)
 						try {
 							await video.play();
-						} catch (error) {
-							// Ignore autoplay errors
-						}
+						} catch (error) {}
 					}}
 				>
 					{isMuted ? "Sound on" : "Sound off"}
@@ -269,8 +352,8 @@ export default ({ title, description, video_file, video_orientation }) => {
 					ref={mainVideoRef}
 					loop
 					playsInline
-					autoPlay
-					muted
+					autoPlay={video_orientation !== "landscape"}
+					muted={video_orientation !== "landscape"}
 					preload="metadata"
 					onClick={handleVideoClick}
 				>
