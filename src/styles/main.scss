@@ -184,7 +184,8 @@ main {
 .project {
 	@extend .grid--12;
 
-	min-height: 100vh;
+	min-height: 100svh;
+	height: min-content;
 	overflow-y: hidden;
 	scroll-snap-align: start;
 	position: relative;
@@ -194,7 +195,7 @@ main {
 	}
 
 	&.in-view {
-		overflow-y: scroll;
+		overflow-y: scroll !important;
 	}
 
 	&.isPaused {
@@ -214,6 +215,14 @@ main {
 	.video__wrapper {
 		position: relative;
 
+		.video-reflection {
+			display: block;
+			width: 100%;
+			height: auto;
+			pointer-events: none;
+			position: relative;
+		}
+
 		@include media(null, sm) {
 			align-self: start;
 			grid-column: 1 / -1;
@@ -223,7 +232,7 @@ main {
 		}
 
 		@include media(sm) {
-			.video-overflow {
+			.video-reflection {
 				display: none !important;
 			}
 		}
@@ -233,7 +242,7 @@ main {
 		@include media(null, sm) {
 			position: relative;
 			row-gap: 0;
-			padding: 25% $spacing--lg $spacing--lg;
+			padding: $spacing--md $spacing--lg $spacing--lg;
 			background: linear-gradient(
 				to bottom,
 				#{$color--dark}00 0%,
@@ -279,6 +288,10 @@ main {
 	}
 
 	&.project--landscape {
+		// Never show the reflection for landscape projects
+		.video-reflection {
+			display: none !important;
+		}
 		@include media(null, sm) {
 			.video__wrapper {
 				display: flex;
@@ -289,12 +302,7 @@ main {
 
 				video {
 					width: 100%;
-					aspect-ratio: 1 / 1;
 					object-fit: cover;
-				}
-
-				.video-overflow {
-					display: none;
 				}
 			}
 		}
@@ -339,9 +347,20 @@ main {
 
 		.video__wrapper {
 			align-items: center;
+			// justify-content: center;
 			cursor: pointer;
 
 			@include media(null, sm) {
+				video {
+					justify-self: center;
+					aspect-ratio: 9 / 16;
+					height: 100%;
+					width: 100%;
+					max-height: 100svh;
+					max-width: 100%;
+					// width: auto !important;
+				}
+
 				.button {
 					position: absolute;
 					z-index: 1;
@@ -360,17 +379,9 @@ main {
 
 			img,
 			video {
-				object-fit: cover;
+				object-fit: contain;
 				display: block;
 				width: 100%;
-			}
-
-			.video-overflow {
-				@include media(sm) {
-					// display: none !important;
-				}
-				object-position: bottom;
-				transform: rotateX(180deg);
 			}
 		}
 

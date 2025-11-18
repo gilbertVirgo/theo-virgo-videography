@@ -7,48 +7,59 @@ export default ({ title, description, video_file, video_orientation }) => {
 	let [actionIndicator, setActionIndicator] = React.useState(null); // 'pause', 'rewind', or null
 
 	const mainVideoRef = React.useRef(null);
-	const overflowVideoRef = React.useRef(null);
-	const syncRAFRef = React.useRef(null);
+	const canvasRef = React.useRef(null);
+	const animationFrameRef = React.useRef(null);
 
 	let videoMimeType = `video/${video_file.url.split(".").pop()}`;
 
-	// Sync underlay video with main video
-	const syncVideos = React.useCallback(() => {
-		const mainVideo = mainVideoRef.current;
-		const underlayVideo = overflowVideoRef.current;
+	// Canvas reflection drawing (mirrors video across X axis) with DPR scaling
+	const drawReflection = React.useCallback(() => {
+		const video = mainVideoRef.current;
+		const canvas = canvasRef.current;
 
-		if (!mainVideo || !underlayVideo) return;
+		if (!video || !canvas || video.readyState < 2) return;
 
-		// Sync play state
-		if (mainVideo.paused && !underlayVideo.paused) {
-			underlayVideo.pause();
-		} else if (!mainVideo.paused && underlayVideo.paused) {
-			underlayVideo.play().catch(() => {}); // Ignore autoplay errors
+		const ctx = canvas.getContext("2d");
+		const rect = video.getBoundingClientRect();
+		if (!rect.width || !rect.height) return;
+
+		// Device pixel ratio for crisp rendering on Retina displays
+		const dpr =
+			typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+		const w = Math.floor(rect.width);
+		const h = Math.floor(rect.height);
+
+		// Set canvas pixel size taking DPR into account; keep CSS size = displayed size
+		const pixelW = Math.max(1, Math.floor(w * dpr));
+		const pixelH = Math.max(1, Math.floor(h * dpr));
+		if (canvas.width !== pixelW || canvas.height !== pixelH) {
+			canvas.width = pixelW;
+			canvas.height = pixelH;
+			canvas.style.width = w + "px";
+			canvas.style.height = h + "px";
 		}
 
-		// Sync currentTime (only if difference is significant to avoid micro-adjustments)
-		const timeDiff = Math.abs(
-			mainVideo.currentTime - underlayVideo.currentTime
-		);
-		if (timeDiff > 0.1) {
-			// 100ms threshold
-			underlayVideo.currentTime = mainVideo.currentTime;
+		// Clear full pixel buffer before applying transforms
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		// Map coordinate system: scale by DPR and flip vertically so we can draw with video coords
+		ctx.setTransform(dpr, 0, 0, -dpr, 0, canvas.height);
+
+		// drawImage(video, dx, dy, dWidth, dHeight) using video-space w,h
+		ctx.drawImage(video, 0, 0, w, h);
+
+		// restore to identity transform for any future operations
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+		if (!video.paused) {
+			animationFrameRef.current = requestAnimationFrame(drawReflection);
 		}
 	}, []);
-
-	// Optimized sync using requestAnimationFrame
-	const requestSync = React.useCallback(() => {
-		if (syncRAFRef.current) return; // Prevent multiple RAF calls
-
-		syncRAFRef.current = requestAnimationFrame(() => {
-			syncVideos();
-			syncRAFRef.current = null;
-		});
-	}, [syncVideos]);
 
 	// Show action indicator and fade it out
 	const showActionIndicator = React.useCallback((type) => {
 		setActionIndicator(type);
+		setTimeout(() => setActionIndicator(null), 660);
 	}, []);
 
 	let handleVideoClick = () => {
@@ -71,87 +82,136 @@ export default ({ title, description, video_file, video_orientation }) => {
 
 	React.useEffect(() => {
 		const mainVideo = mainVideoRef.current;
-		const underlayVideo = overflowVideoRef.current;
 
-		if (!mainVideo || !underlayVideo) return;
+		if (!mainVideo) return;
 
 		// Event listeners for main video state changes
 		const handlePlay = () => {
 			setIsPaused(false);
-			requestSync();
+			drawReflection(); // start canvas drawing loop
 		};
 		const handlePause = () => {
 			setIsPaused(true);
-			requestSync();
+			if (animationFrameRef.current)
+				cancelAnimationFrame(animationFrameRef.current);
 		};
-		const handleVolumeChange = () => {
-			setIsMuted(mainVideo.muted);
+		const handleVolumeChange = () => setIsMuted(mainVideo.muted);
+		const handleLoaded = () => {
+			if (!mainVideo.paused) drawReflection();
 		};
-		const handleSeeked = () => requestSync();
-		const handleTimeUpdate = () => requestSync();
 
 		mainVideo.addEventListener("play", handlePlay);
 		mainVideo.addEventListener("pause", handlePause);
 		mainVideo.addEventListener("volumechange", handleVolumeChange);
-		mainVideo.addEventListener("seeked", handleSeeked);
-		mainVideo.addEventListener("timeupdate", handleTimeUpdate);
+		mainVideo.addEventListener("loadeddata", handleLoaded);
 
 		// Set initial muted state and start playing
 		mainVideo.muted = isMuted;
-
-		// Start video manually (better for audio control)
-		mainVideo.play().catch(() => {
-			// Ignore autoplay errors
-		});
-
-		// Initial sync
-		requestSync();
+		mainVideo.play().catch(() => {});
 
 		// Set up intersection observer to pause video when scrolling away
+		// Find the nearest scrollable ancestor (so intersections are calculated
+		// relative to the element that actually scrolls, not necessarily the viewport)
+		const findScrollParent = (el) => {
+			if (!el) return null;
+			let parent = el.parentElement;
+			while (parent) {
+				try {
+					const style = getComputedStyle(parent);
+					const overflowY =
+						(style.overflowY || "") + (style.overflow || "");
+					if (/(auto|scroll|overlay)/.test(overflowY)) return parent;
+				} catch (e) {
+					// ignore cross-origin or other access errors
+				}
+				parent = parent.parentElement;
+			}
+			return null;
+		};
+
+		const scrollRoot = findScrollParent(mainVideo) || null;
+		// Use a high threshold so the section is considered 'in-view' when it's mostly filling the
+		// scroll container (good for snap-to behavior).
 		const observer = new IntersectionObserver(
 			(entries) => {
 				const entry = entries[0];
-				if (!entry.isIntersecting && !mainVideo.paused) {
-					// Video is out of view and playing - pause it
-					mainVideo.pause();
-					setShowFullText(false);
-				} else if (entry.isIntersecting && mainVideo.paused) {
-					// Video is in view and paused - play it
-					mainVideo.play().catch(() => {});
+				if (!entry) return;
+				// Toggle in-view class on the observed project element
+				if (entry.target) {
+					if (entry.isIntersecting)
+						entry.target.classList.add("in-view");
+					else entry.target.classList.remove("in-view");
+				}
+
+				// Instead of pausing videos when out-of-view, mute them so autoplay
+				// can continue and audio doesn't overlap.
+				if (!entry.isIntersecting) {
+					try {
+						mainVideo.muted = true;
+						setIsMuted(true);
+						setShowFullText(false);
+					} catch (e) {}
+				} else {
+					// When in-view, leave playback running (autoPlay handles it).
+					// Do not auto-unmute; keep the mute state controlled by user.
 				}
 			},
-			{
-				threshold: 0.5, // Trigger when 50% visible
-				rootMargin: "0px",
-			}
+			{ root: scrollRoot, threshold: 0.75, rootMargin: "0px" }
 		);
 
-		// Observe the project section
 		const projectSection = mainVideo.closest(".project");
-		if (projectSection) {
-			observer.observe(projectSection);
+		if (projectSection) observer.observe(projectSection);
+
+		// ResizeObserver to keep canvas matched to video displayed size
+		let resizeObserver = null;
+		if (canvasRef && canvasRef.current) {
+			resizeObserver = new ResizeObserver(() => {
+				const canvas = canvasRef.current;
+				const rect = mainVideo.getBoundingClientRect();
+				if (!rect.width || !rect.height) return;
+				const w = Math.floor(rect.width);
+				const h = Math.floor(rect.height);
+				const dpr =
+					typeof window !== "undefined"
+						? window.devicePixelRatio || 1
+						: 1;
+				const pixelW = Math.max(1, Math.floor(w * dpr));
+				const pixelH = Math.max(1, Math.floor(h * dpr));
+				if (canvas.width !== pixelW || canvas.height !== pixelH) {
+					canvas.width = pixelW;
+					canvas.height = pixelH;
+					canvas.style.width = w + "px";
+					canvas.style.height = h + "px";
+				}
+				// If video is playing, ensure drawing continues with the new size
+				if (!mainVideo.paused) {
+					drawReflection();
+				}
+			});
+
+			// Observe the video element for size changes
+			resizeObserver.observe(mainVideo);
 		}
 
-		// Cleanup
 		return () => {
 			mainVideo.removeEventListener("play", handlePlay);
 			mainVideo.removeEventListener("pause", handlePause);
 			mainVideo.removeEventListener("volumechange", handleVolumeChange);
-			mainVideo.removeEventListener("seeked", handleSeeked);
-			mainVideo.removeEventListener("timeupdate", handleTimeUpdate);
-
-			if (syncRAFRef.current) {
-				cancelAnimationFrame(syncRAFRef.current);
-			}
-
-			// Cleanup intersection observer
-			const projectSection = mainVideo.closest(".project");
+			mainVideo.removeEventListener("loadeddata", handleLoaded);
+			if (animationFrameRef.current)
+				cancelAnimationFrame(animationFrameRef.current);
 			if (projectSection && observer) {
 				observer.unobserve(projectSection);
 				observer.disconnect();
 			}
+
+			if (resizeObserver) {
+				resizeObserver.disconnect();
+			}
+
+			// No play-retry timers to clear after switching to mute-only behavior
 		};
-	}, [requestSync]);
+	}, []);
 
 	return (
 		<section
@@ -209,20 +269,14 @@ export default ({ title, description, video_file, video_orientation }) => {
 					ref={mainVideoRef}
 					loop
 					playsInline
+					autoPlay
+					muted
 					preload="metadata"
 					onClick={handleVideoClick}
 				>
 					<source src={video_file.url} type={videoMimeType} />
 				</video>
-				<video
-					ref={overflowVideoRef}
-					className="video-overflow"
-					muted
-					playsInline
-					preload="metadata"
-				>
-					<source src={video_file.url} type={videoMimeType} />
-				</video>
+				<canvas ref={canvasRef} className="video-reflection" />
 			</div>
 			<div
 				className={`text__wrapper ${
